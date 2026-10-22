@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AnyGameRenderer</title>
+<link rel="icon" type="image/png" href="media/favicon.png">
+<style>
+@font-face{font-family:CP;src:url(fonts/ChakraPetch-SemiBold.ttf);font-weight:600}
+@font-face{font-family:CP;src:url(fonts/ChakraPetch-Bold.ttf);font-weight:700}
+@font-face{font-family:JBM;src:url(fonts/JetBrainsMono.ttf);font-weight:100 800}
+@font-face{font-family:InterV;src:url(fonts/Inter.ttf);font-weight:100 900}
+:root{--bg:#05070d;--panel:#0b1120;--panel2:#0e1526;--ink:#e7eeff;--mut:#8a96b4;--line:#1b2742;
+--cy:#2de2ff;--am:#ffb454;--vi:#b98bff;--mg:#ff5fa8;color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.65 InterV,system-ui,sans-serif;
+-webkit-font-smoothing:antialiased;overflow-x:hidden}
+/* backdrop: particles canvas, faded grid, aurora blobs */
+#fx{position:fixed;inset:0;z-index:-2}
+body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+background-image:linear-gradient(rgba(110,150,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(110,150,255,.05) 1px,transparent 1px);
+background-size:56px 56px;
+-webkit-mask-image:radial-gradient(ellipse 120% 90% at 50% 0%,#000 25%,transparent 75%);
+mask-image:radial-gradient(ellipse 120% 90% at 50% 0%,#000 25%,transparent 75%)}
+body:after{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;
+background:radial-gradient(38% 30% at 18% 8%,rgba(45,226,255,.13),transparent 60%),
+radial-gradient(34% 28% at 85% 12%,rgba(185,139,255,.13),transparent 60%),
+radial-gradient(40% 32% at 55% 96%,rgba(255,95,168,.07),transparent 60%)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+/* hero */
+/* top bar */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:58px;display:flex;align-items:center;
+justify-content:space-between;padding:0 26px;background:rgba(5,8,14,.72);backdrop-filter:blur(14px);
+-webkit-backdrop-filter:blur(14px)}
+#topbar:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+background:linear-gradient(90deg,transparent,rgba(45,226,255,.55) 18%,rgba(185,139,255,.45) 50%,rgba(255,180,84,.4) 82%,transparent)}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.brand img{height:26px;filter:invert(1);display:block;transition:filter .25s}
+.brand:hover img{filter:invert(1) drop-shadow(0 0 6px rgba(45,226,255,.8))}
+.bname{font:700 15px CP;letter-spacing:.12em}
+.bname i{font-style:normal;font-weight:400;color:var(--mut);margin-left:2px}
+.bdiv{width:1px;height:20px;background:var(--line);transform:skewX(-18deg)}
+.bprod{font:500 11px JBM;letter-spacing:.18em;text-transform:uppercase;
+background:linear-gradient(90deg,var(--cy),var(--vi));-webkit-background-clip:text;background-clip:text;color:transparent}
+.topnav{display:flex;gap:22px}
+.topnav a{font:600 11px JBM;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);
+text-decoration:none;padding:4px 0;position:relative;transition:color .2s}
+.topnav a i{font-style:normal;margin-right:6px}
+.topnav a:nth-child(1) i{color:var(--cy)} .topnav a:nth-child(2) i{color:var(--am)}
+.topnav a:nth-child(3) i{color:var(--vi)} .topnav a:nth-child(4) i{color:var(--cy)}
+.topnav a:nth-child(5) i{color:var(--am)}
+.topnav a:after{content:"";position:absolute;left:0;right:100%;bottom:-2px;height:1px;
+background:linear-gradient(90deg,var(--cy),var(--vi));transition:right .25s}
+.topnav a:hover{color:var(--ink)}
+.topnav a:hover:after{right:0}
+@media(max-width:900px){.topnav,.bprod,.bdiv{display:none}}
+header,section{scroll-margin-top:66px}
+header{padding:128px 0 52px;border-bottom:1px solid var(--line)}
+h1{font:700 clamp(40px,6.6vw,78px)/1.05 CP;letter-spacing:.02em;text-transform:uppercase;margin:16px 0 12px}
+h1 b{background:linear-gradient(100deg,var(--cy),var(--vi) 75%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:clamp(16px,2.2vw,21px);color:var(--mut);white-space:nowrap}
+@media(max-width:860px){.tag{white-space:normal;max-width:640px}}
+.links{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+.links a{display:inline-flex;align-items:center;gap:7px;font:600 12.5px JBM;letter-spacing:.08em;
+text-transform:uppercase;color:var(--ink);text-decoration:none;padding:8px 16px;border-radius:999px;
+background:var(--panel);border:1px solid var(--line)}
+.links a:hover{background:var(--panel2);border-color:#2b3b63;color:var(--cy)}
+padding:10px 18px;background:var(--panel);border:1px solid var(--line);
+clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+nav a i{font-style:normal;margin-right:8px}
+nav a:nth-child(1) i{color:var(--cy)} nav a:nth-child(2) i{color:var(--am)} nav a:nth-child(3) i{color:var(--vi)}
+nav a:nth-child(4) i{color:var(--mg)}
+nav a:hover{background:var(--panel2);border-color:#2b3b63}
+.hero-video{margin-top:44px;padding:1px;border-radius:14px;
+background:linear-gradient(135deg,rgba(45,226,255,.55),rgba(27,39,66,.85) 35%,rgba(185,139,255,.45) 75%,rgba(255,95,168,.35));
+box-shadow:0 0 90px -24px rgba(45,226,255,.4)}
+.hero-video video{width:100%;display:block;border-radius:13px;background:#000}
+.overview{margin:30px auto 0;max-width:860px;font:400 16px/1.75 InterV;color:#b7c4d6;text-align:left}
+/* sections */
+section{padding:80px 0 14px}
+.head-row{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;margin-bottom:6px}
+.kick{font:700 13px JBM;letter-spacing:.3em}
+.kick:after{content:" //"}
+h2{font:700 clamp(24px,3.6vw,36px) CP;letter-spacing:.03em;text-transform:uppercase}
+.sub{color:var(--mut);max-width:820px;margin:8px 0 28px;font-size:15px}
+.s1 .kick{color:var(--cy)} .s2 .kick{color:var(--am)} .s3 .kick{color:var(--vi)}
+/* grid + cards */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid.g1{grid-template-columns:1fr;max-width:980px}
+.grid.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.grid,.grid.g2{grid-template-columns:1fr}}
+figure.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+border-radius:12px;padding:10px;position:relative;transition:border-color .2s,box-shadow .2s}
+figure.card:after{content:"";position:absolute;top:-1px;left:16px;width:34%;height:1px}
+.s1 figure.card:after{background:linear-gradient(90deg,var(--cy),transparent)}
+.s2 figure.card:after{background:linear-gradient(90deg,var(--am),transparent)}
+.s3 figure.card:after{background:linear-gradient(90deg,var(--vi),transparent)}
+.s1 figure.card:hover{border-color:#1f4b63;box-shadow:0 0 36px -14px rgba(45,226,255,.45)}
+.s2 figure.card:hover{border-color:#5c4322;box-shadow:0 0 36px -14px rgba(255,180,84,.4)}
+.s3 figure.card:hover{border-color:#43315f;box-shadow:0 0 36px -14px rgba(185,139,255,.45)}
+figcaption{display:flex;justify-content:space-between;align-items:baseline;padding:10px 6px 4px;font-size:14.5px;font-weight:600}
+figcaption small{color:var(--mut);font:500 11px JBM;letter-spacing:.12em;text-transform:uppercase}
+/* wipe (before/after slider) — sections 01 & 02 */
+.wipe{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#02050a;
+cursor:ew-resize;touch-action:pan-y;user-select:none;--x:50%}
+.wipe video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.wipe .cond{clip-path:inset(0 calc(100% - var(--x)) 0 0)}
+.seam{position:absolute;top:0;bottom:0;left:var(--x);width:2px;margin-left:-1px;pointer-events:none}
+.s1 .seam{background:var(--cy);color:var(--cy);box-shadow:0 0 14px rgba(45,226,255,.9)}
+.s2 .seam{background:var(--am);color:var(--am);box-shadow:0 0 14px rgba(255,180,84,.9)}
+.s5 .seam{background:var(--cy);color:var(--cy);box-shadow:0 0 14px rgba(45,226,255,.9)}
+.s5 .wtag{display:none}
+.seam:before{content:"";position:absolute;top:50%;left:50%;width:30px;height:30px;transform:translate(-50%,-50%);
+border-radius:50%;background:rgba(4,9,16,.55);border:1.5px solid currentColor;backdrop-filter:blur(4px);
+box-shadow:0 0 12px -2px currentColor}
+.seam:after{content:"\2039\2002\203A";position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
+font:600 13px/1 JBM;color:#eaf2ff;letter-spacing:1px}
+.wtag{position:absolute;bottom:10px;font:600 10px JBM;letter-spacing:.14em;text-transform:uppercase;
+padding:4px 9px;border-radius:4px;background:rgba(3,7,14,.78);border:1px solid rgba(255,255,255,.08);
+backdrop-filter:blur(6px);pointer-events:none;color:#dfe8ff}
+.wtag.l{left:10px}
+.wtag.r{right:10px}
+.s1 .wtag.r{color:var(--cy)} .s2 .wtag.r{color:var(--am)}
+/* multi (one input beside several style outputs) — section 03 */
+.multi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.multi .tile{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#02050a;user-select:none}
+.multi video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.multi .wtag{left:8px;bottom:8px;right:auto}
+.multi .tile.sty .wtag{color:var(--vi)}
+/* sample tabs */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.tabs button{font:600 12.5px CP;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);
+background:var(--panel);border:1px solid var(--line);padding:8px 15px;cursor:pointer;
+clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)}
+.tabs button:hover{color:var(--ink);border-color:#2b3b63}
+.tabs button.on{color:#041018;background:linear-gradient(90deg,var(--cy),var(--vi));border-color:transparent}
+figure.sample[hidden]{display:none}
+/* stats bar */
+.stats{margin-top:34px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:960px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+border-radius:10px;padding:14px 12px 12px}
+.stat b{display:block;font:700 clamp(20px,2.4vw,27px)/1.1 CP;
+background:linear-gradient(100deg,var(--cy),var(--vi));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat span{display:block;margin-top:5px;font:500 10.5px JBM;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+/* tech sections */
+.s4 .kick{color:var(--mg)} .s5 .kick{color:var(--cy)} .s6 .kick{color:var(--am)}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1060px}
+@media(max-width:900px){.feat{grid-template-columns:1fr}}
+.feat article{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+border-radius:12px;padding:18px 18px 16px;position:relative}
+.feat article:after{content:"";position:absolute;top:-1px;left:14px;width:30%;height:1px}
+.s4 .feat article:after{background:linear-gradient(90deg,var(--mg),transparent)}
+.s5 .feat article:after{background:linear-gradient(90deg,var(--cy),transparent)}
+.feat h3{font:700 15px CP;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px}
+.feat h3 em{font-style:normal;font:700 11px JBM;letter-spacing:.1em;color:var(--mut);display:block;margin-bottom:6px}
+.s4 .feat h3{color:#ffd1e6} .s5 .feat h3{color:#c9f3ff}
+.feat p{font-size:13.5px;line-height:1.65;color:var(--mut)}
+.feat p b{color:var(--ink);font-weight:600}
+.feat article .wipe{margin-top:12px}
+.total-line{margin-top:18px;font:500 12.5px JBM;letter-spacing:.06em;color:var(--mut)}
+.total-line b{color:var(--cy)}
+/* benchmark table */
+.bench{max-width:780px;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+background:linear-gradient(180deg,var(--panel2),var(--panel))}
+.bench table{width:100%;border-collapse:collapse;font-size:13.5px}
+.bench th{font:600 11px JBM;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-align:right;
+padding:12px 16px;border-bottom:1px solid var(--line)}
+.bench th:first-child{text-align:left}
+.bench td{padding:11px 16px;text-align:right;border-bottom:1px solid rgba(27,39,66,.55);color:var(--mut)}
+.bench td:first-child{text-align:left;color:var(--ink);font-weight:500}
+.bench tr:last-child td{border-bottom:none}
+.bench td.ours{font:700 14px CP;color:var(--am)}
+.bench td.gt{font-family:JBM;font-size:12.5px}
+.note{margin-top:14px;font-size:12.5px;color:var(--mut);max-width:780px}
+footer{margin-top:92px;padding:34px 0 52px;border-top:1px solid var(--line);color:var(--mut);
+font:400 12px JBM;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<div id="topbar">
+  <a class="brand" href="#">
+    <img src="media/alaya_mark.png" alt="Alaya Lab logo">
+    <span class="bname">ALAYA<i>LAB</i></span>
+    <span class="bdiv"></span>
+    <span class="bprod">AnyGameRenderer</span>
+  </a>
+  <nav class="topnav">
+    <a href="#genres"><i>01</i>Genres</a>
+    <a href="#inputs"><i>02</i>Inputs</a>
+    <a href="#styles"><i>03</i>Styles</a>
+    <a href="#data"><i>04</i>Data</a>
+    <a href="#bench"><i>05</i>Benchmark</a>
+  </nav>
+</div>
+
+<header>
+  <div class="wrap">
+    <h1>Any<b>Game</b>Renderer</h1>
+    <p class="tag">From blockout to AAA &mdash; one generative renderer for any vibe-coded game.</p>
+    <div class="links">
+      <a id="lnk-arxiv" href="#"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 2H9a2 2 0 0 0-2 2v3H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3h2a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-4 18H5V9h2v9a2 2 0 0 0 2 2h6zm4-5H9V4h10z"/></svg>Technical report</a>
+      <a id="lnk-github" href="#"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>Code</a>
+      <svg style="display:none" xmlns="http://www.w3.org/2000/svg"><symbol id="i-hf" viewBox="0 0 24 24"><path d="M1.4446 11.5059c0 1.1021.1673 2.1585.4847 3.1563-.0378-.0028-.0691-.0058-.1058-.0058-.4209 0-.8015.16-1.0704.4512-.3454.3737-.4984.8335-.4316 1.293a1.576 1.576 0 0 0 .2148.5978c-.2319.1864-.4018.4456-.4844.7578-.0646.2448-.131.7543.2149 1.2794a1.4552 1.4552 0 0 0-.0625.1055c-.208.3923-.2207.8372-.0371 1.25.2783.6258.9696 1.1175 2.3126 1.6467.8356.3292 1.5988.5411 1.6056.543 1.1046.2847 2.104.4277 2.969.4277 1.4173 0 2.4754-.3849 3.1525-1.1446 1.538.2651 2.791.1403 3.592.006.6773.7555 1.7332 1.1387 3.1467 1.1387.8649 0 1.8643-.143 2.969-.4278.0068-.0019.77-.2138 1.6056-.543 1.343-.5292 2.0343-1.0208 2.3126-1.6466.1836-.4129.171-.8577-.037-1.25a1.4685 1.4685 0 0 0-.0626-.1056c.346-.525.2795-1.0346.2149-1.2793-.0826-.3122-.2525-.5714-.4844-.7579.11-.1816.1831-.3788.2148-.5977.0669-.4595-.0862-.9193-.4316-1.293-.2688-.2913-.6495-.4513-1.0704-.4513-.0209 0-.0376.0008-.0588.0018.3162-.9966.4846-2.0518.4846-3.1523 0-5.807-4.7362-10.5144-10.5789-10.5144-5.8426 0-10.5788 4.7073-10.5788 10.5144Zm10.5788-9.4831c5.2727 0 9.5476 4.246 9.5476 9.483a9.4201 9.4201 0 0 1-.2696 2.2365c-.0039-.0047-.0079-.011-.0117-.0156-.274-.3255-.6679-.5059-1.1075-.5059-.352 0-.714.1155-1.0763.3438-.2403.1517-.5058.422-.7793.7598-.2534-.3492-.608-.5832-1.0137-.6465a1.5174 1.5174 0 0 0-.2344-.0176c-.9263 0-1.4828.7993-1.6935 1.5177-.1046.2426-.6065 1.3482-1.3614 2.0978-1.1681 1.1601-1.4458 2.3534-.8396 3.6382-.843.1029-1.5836.0927-2.365-.006.5906-1.212.3626-2.4388-.8426-3.6322-.755-.7496-1.2568-1.8552-1.3614-2.0978-.2107-.7184-.7673-1.5177-1.6935-1.5177-.078 0-.1568.0054-.2344.0176-.4057.0633-.7604.2973-1.0137.6465-.2735-.3379-.539-.6081-.7794-.7598-.3622-.2283-.7243-.3438-1.0762-.3438-.4266 0-.8094.171-1.0821.4786a9.4208 9.4208 0 0 1-.2598-2.1936c0-5.237 4.2749-9.483 9.5475-9.483zM8.6443 7.0036c-.4838.0043-.9503.2667-1.1934.7227-.3536.6633-.1006 1.4873.5645 1.84.351.1862.4883-.5261.836-.6485.3107-.1095.841.399 1.0078.086.3536-.6634.1025-1.4874-.5625-1.84a1.3659 1.3659 0 0 0-.6524-.1602Zm6.8403 0c-.2199-.002-.4426.05-.6504.1602-.665.3526-.9181 1.1766-.5645 1.84.1669.313.6971-.1955 1.0079-.086.3476.1224.4867.8347.838.6485.6649-.3527.916-1.1767.5624-1.84-.243-.456-.7096-.7184-1.1934-.7227Zm-9.7565 1.418a.8768.8768 0 0 0-.877.877c0 .4846.3925.877.877.877a.8768.8768 0 0 0 .877-.877.8768.8768 0 0 0-.877-.877zm12.6434 0c-.4845 0-.879.3925-.879.877 0 .4846.3945.877.879.877a.8768.8768 0 0 0 .877-.877.8768.8768 0 0 0-.877-.877zM8.7927 11.459c-.179-.003-.2793.1107-.2793.416 0 .8097.3874 2.125 1.4279 2.924.207-.7123 1.3453-1.2832 1.5079-1.2012.2315.1167.2191.4417.6074.7266.3884-.285.374-.6098.6056-.7266.1627-.082 1.3009.4889 1.5079 1.2012 1.0404-.799 1.4278-2.1144 1.4278-2.924 0-1.2212-1.583.6402-3.5413.6485-1.4686-.0061-2.7266-1.0558-3.2639-1.0645zM4.312 14.4768c.5792.365 1.6964 2.2751 2.1056 3.0177.1371.2488.371.3536.582.3536.4188 0 .7465-.4138.0391-.9395-1.0636-.791-.6914-2.0846-.1836-2.1642a.4302.4302 0 0 1 .0664-.004c.4616 0 .666.7892.666.7892s.5959 1.4898 1.6213 2.508c.942.9356 1.062 1.703.4961 2.6661-.0164-.004-.0159.0236-.1484.2149-.1853.2673-.4322.4688-.7188.6152-.5062.2269-1.1397.2696-1.7833.2696-1.037 0-2.1017-.1824-2.6975-.336-.0293-.0075-3.6505-.9567-3.1916-1.8224.0771-.1454.2033-.2031.3633-.2031.6463 0 1.823.9551 2.3283.9551.113 0 .196-.0865.2285-.2031.2249-.8045-3.2787-1.0522-2.9846-2.1642.0519-.1967.193-.2757.3907-.2754.854 0 2.7704 1.4923 3.172 1.4923.0307 0 .0525-.0085.0645-.0274.2012-.3227.1096-.5865-1.3087-1.4395-1.4182-.8533-2.4315-1.329-1.8653-1.9416.0651-.0707.1574-.1015.2695-.1015.8611.0002 2.8948 1.84 2.8948 1.84s.5487.5683.8809.5683c.0762 0 .1416-.0315.1855-.1054.2355-.3946-2.1858-2.2183-2.3224-2.971-.0926-.51.0641-.7676.3555-.7676-.0006.008.1701-.0285.4942.1759zm16.2257.5918c-.1366.7526-2.5579 2.5764-2.3224 2.9709.044.074.1092.1055.1855.1055.3321 0 .881-.5684.881-.5684s2.0336-1.8397 2.8947-1.84c.1121 0 .2044.0308.2695.1016.5662.6125-.447 1.0882-1.8653 1.9415-1.4183.853-1.51 1.1168-1.3087 1.4396.012.0188.0337.0273.0644.0273.4016 0 2.3181-1.4923 3.1721-1.4923.1977-.0002.3388.0787.3907.2754.294 1.112-3.2095 1.3597-2.9846 2.1642.0325.1166.1156.2032.2285.2032.5054 0 1.682-.9552 2.3283-.9552.16 0 .2862.0577.3633.2032.459.8656-3.1623 1.8149-3.1916 1.8224-.5958.1535-1.6605.336-2.6975.336-.6351 0-1.261-.0409-1.7638-.2599-.2949-.1472-.5488-.3516-.7383-.625-.0411-.0682-.1026-.1476-.1426-.205-.5726-.9679-.455-1.7371.4903-2.676 1.0254-1.0182 1.6212-2.508 1.6212-2.508s.2044-.7891.666-.7891a.4318.4318 0 0 1 .0665.0039c.5078.0796.88 1.3732-.1836 2.1642-.7074.5257-.3797.9395.039.9395.211 0 .445-.1047.5821-.3535.4092-.7426 1.5264-2.6527 2.1056-3.0178.5588-.3524.99-.1816.8497.5918z"/></symbol></svg>
+      <a id="lnk-model" href="#"><svg width="14" height="14" fill="currentColor"><use href="#i-hf"/></svg>Model</a>
+      <a id="lnk-dataset" href="#"><svg width="14" height="14" fill="currentColor"><use href="#i-hf"/></svg>Dataset</a>
+    </div>
+    <div class="hero-video">
+      <video src="media/promo.mp4" controls playsinline preload="metadata"></video>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>38</b><span>agent-made games in training</span></div>
+      <div class="stat"><b>14.8 h</b><span>paired video &middot; 10,330 clips</span></div>
+      <div class="stat"><b>+12 pts</b><span>entity temporal match vs zero-shot</span></div>
+      <div class="stat"><b>&minus;39%</b><span>missed in-game count changes</span></div>
+    </div>
+    <p class="overview">Agents and vibe-coding tools can already build a playable game &mdash; the layout, logic, motion and camera of every scene. AnyGameRenderer turns that crude recording into the finished game, and one checkpoint covers all three axes of diversity: <b>many game genres</b> &mdash; shooters, racers, sports, fantasy and more; <b>many input forms</b> &mdash; blockouts, colored primitives, wireframes, semantic maps, coarse mockups; and <b>many output styles</b> &mdash; from Ghibli and LEGO to cyberpunk and watercolor &mdash; with every entity&rsquo;s position, timing and count locked to the input.</p>
+  </div>
+</header>
+
+<section id="genres" class="s1">
+  <div class="wrap">
+    <div class="head-row"><span class="kick">01</span><h2>Diverse game genres</h2></div>
+    <p class="sub">One model renders shooters, racers, sports and fantasy alike. Drag the seam: left of the line is the crude input the model sees, right is what it returns.</p>
+    <div class="grid">
+      <figure class="card"><div class="wipe" data-in="media/trenchfire/in.mp4" data-out="media/trenchfire/out.mp4" data-poster="media/trenchfire/poster.jpg"></div><figcaption><span>WW1 shooter</span><small>first person</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/cityroam/in.mp4" data-out="media/cityroam/out.mp4" data-poster="media/cityroam/poster.jpg"></div><figcaption><span>Open-city driving</span><small>third person</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/turbokart/in.mp4" data-out="media/turbokart/out.mp4" data-poster="media/turbokart/poster.jpg"></div><figcaption><span>Kart racing</span><small>chase cam</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/elitestriker/in.mp4" data-out="media/elitestriker/out.mp4" data-poster="media/elitestriker/poster.jpg"></div><figcaption><span>Soccer broadcast</span><small>tv cam</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/spinarena/in.mp4" data-out="media/spinarena/out.mp4" data-poster="media/spinarena/poster.jpg"></div><figcaption><span>Spinning-top battle</span><small>arena</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/aliensurv/in.mp4" data-out="media/aliensurv/out.mp4" data-poster="media/aliensurv/poster.jpg"></div><figcaption><span>Survivors-like</span><small>top down</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/wheelfactor/in.mp4" data-out="media/wheelfactor/out.mp4" data-poster="media/wheelfactor/poster.jpg"></div><figcaption><span>Vehicle combat</span><small>mud arena</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/fallenangels/in.mp4" data-out="media/fallenangels/out.mp4" data-poster="media/fallenangels/poster.jpg"></div><figcaption><span>Dark fantasy</span><small>top down</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/yavball/in.mp4" data-out="media/yavball/out.mp4" data-poster="media/yavball/poster.jpg"></div><figcaption><span>Fantasy ball sport</span><small>arena</small></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="inputs" class="s2">
+  <div class="wrap">
+    <div class="head-row"><span class="kick">02</span><h2>Different input forms</h2></div>
+    <p class="sub">The input does not have to be one fixed format. Wireframes, clay mockups, 2D semantic maps, bare primitives, engine whiteboxes — the model reads them all.</p>
+    <div class="grid">
+      <figure class="card"><div class="wipe" data-in="media/wireframe/in.mp4" data-out="media/wireframe/out.mp4" data-poster="media/wireframe/poster.jpg"></div><figcaption><span>Wireframe boxes</span><small>input form</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/coarse/in.mp4" data-out="media/coarse/out.mp4" data-poster="media/coarse/poster.jpg"></div><figcaption><span>Coarse 3D mockup</span><small>input form</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/semantic/in.mp4" data-out="media/semantic/out.mp4" data-poster="media/semantic/poster.jpg"></div><figcaption><span>2D semantic map</span><small>input form</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/ellipsoids/in.mp4" data-out="media/ellipsoids/out.mp4" data-poster="media/ellipsoids/poster.jpg"></div><figcaption><span>Primitive ellipsoids</span><small>input form</small></figcaption></figure>
+      <figure class="card"><div class="wipe" data-in="media/whitebox/in.mp4" data-out="media/whitebox/out.mp4" data-poster="media/whitebox/poster.jpg"></div><figcaption><span>Engine whitebox</span><small>input form</small></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="styles" class="s3">
+  <div class="wrap">
+    <div class="head-row"><span class="kick">03</span><h2>One input, many output styles</h2></div>
+    <p class="sub">The same crude clip can be rendered into whatever world you ask for &mdash; whether it arrives as a blockout or a semantic map. One input, its rendered styles beside it, all playing together. Click through the samples.</p>
+    <div class="tabs" id="s3tabs">
+      <button class=on data-for="sm1">Sample 1</button>
+      <button data-for="sm2">Sample 2</button>
+      <button data-for="sm3">Sample 3</button>
+      <button data-for="sm4">Sample 4</button>
+      <button data-for="sm5">Sample 5</button>
+      <button data-for="sm6">Sample 6</button>
+      <button data-for="sm7">Sample 7</button>
+      <button data-for="sm8">Sample 8</button>
+      <button data-for="sm9">Sample 9</button>
+      <button data-for="sm10">Sample 10</button>
+    </div>
+    <div class="grid g1">
+      <figure class="card sample" id="sm1">
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch3__block-o-mon_e03/in.mp4" data-poster="media/agentgame/batch3__block-o-mon_e03/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__block-o-mon_e03/felt.mp4" data-poster="media/agentgame/batch3__block-o-mon_e03/felt.jpg" data-label="Felt &amp; knit"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__block-o-mon_e03/ukiyoe.mp4" data-poster="media/agentgame/batch3__block-o-mon_e03/ukiyoe.jpg" data-label="Ukiyo-e print"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__block-o-mon_e03/pirates.mp4" data-poster="media/agentgame/batch3__block-o-mon_e03/pirates.jpg" data-label="Pirate seas"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__block-o-mon_e03/pencilsketch.mp4" data-poster="media/agentgame/batch3__block-o-mon_e03/pencilsketch.jpg" data-label="Pencil sketch"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__block-o-mon_e03/steampunk.mp4" data-poster="media/agentgame/batch3__block-o-mon_e03/steampunk.jpg" data-label="Steampunk"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm2" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/egg00_sem/in.mp4" data-poster="media/agentgame/egg00_sem/in.jpg" data-label="Semantic map input"></div>
+          <div class="tile sty" data-src="media/agentgame/egg00_sem/ghibli.mp4" data-poster="media/agentgame/egg00_sem/ghibli.jpg" data-label="Ghibli anime"></div>
+          <div class="tile sty" data-src="media/agentgame/egg00_sem/lego.mp4" data-poster="media/agentgame/egg00_sem/lego.jpg" data-label="LEGO bricks"></div>
+          <div class="tile sty" data-src="media/agentgame/egg00_sem/cyberpunk.mp4" data-poster="media/agentgame/egg00_sem/cyberpunk.jpg" data-label="Cyberpunk neon"></div>
+          <div class="tile sty" data-src="media/agentgame/egg00_sem/watercolor.mp4" data-poster="media/agentgame/egg00_sem/watercolor.jpg" data-label="Watercolor"></div>
+          <div class="tile sty" data-src="media/agentgame/egg00_sem/pixelart.mp4" data-poster="media/agentgame/egg00_sem/pixelart.jpg" data-label="16-bit pixel art"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm3" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch3__turbo-kart_e05/in.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__turbo-kart_e05/fallout.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/fallout.jpg" data-label="Nuclear wasteland"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__turbo-kart_e05/felt.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/felt.jpg" data-label="Felt &amp; knit"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__turbo-kart_e05/synthwave.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/synthwave.jpg" data-label="Synthwave"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__turbo-kart_e05/ukiyoe.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/ukiyoe.jpg" data-label="Ukiyo-e print"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__turbo-kart_e05/pirates.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/pirates.jpg" data-label="Pirate seas"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__turbo-kart_e05/pencilsketch.mp4" data-poster="media/agentgame/batch3__turbo-kart_e05/pencilsketch.jpg" data-label="Pencil sketch"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm4" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/poke_multi/in.mp4" data-poster="media/poke_multi/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/poke_multi/meadow.mp4" data-poster="media/poke_multi/meadow.jpg" data-label="Painted meadow"></div>
+          <div class="tile sty" data-src="media/poke_multi/chibi.mp4" data-poster="media/poke_multi/chibi.jpg" data-label="Chibi flower fields"></div>
+          <div class="tile sty" data-src="media/poke_multi/craft.mp4" data-poster="media/poke_multi/craft.jpg" data-label="Voxel desert"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm5" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch2__academy-firefight_e04/in_sem.mp4" data-poster="media/agentgame/batch2__academy-firefight_e04/in_sem.jpg" data-label="Semantic map input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch2__academy-firefight_e04/ghibli.mp4" data-poster="media/agentgame/batch2__academy-firefight_e04/ghibli.jpg" data-label="Ghibli anime"></div>
+          <div class="tile sty" data-src="media/agentgame/batch2__academy-firefight_e04/lego.mp4" data-poster="media/agentgame/batch2__academy-firefight_e04/lego.jpg" data-label="LEGO bricks"></div>
+          <div class="tile sty" data-src="media/agentgame/batch2__academy-firefight_e04/cyberpunk.mp4" data-poster="media/agentgame/batch2__academy-firefight_e04/cyberpunk.jpg" data-label="Cyberpunk neon"></div>
+          <div class="tile sty" data-src="media/agentgame/batch2__academy-firefight_e04/watercolor.mp4" data-poster="media/agentgame/batch2__academy-firefight_e04/watercolor.jpg" data-label="Watercolor"></div>
+          <div class="tile sty" data-src="media/agentgame/batch2__academy-firefight_e04/pixelart.mp4" data-poster="media/agentgame/batch2__academy-firefight_e04/pixelart.jpg" data-label="16-bit pixel art"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm6" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/nf_multi/in.mp4" data-poster="media/nf_multi/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/nf_multi/s2.mp4" data-poster="media/nf_multi/s2.jpg" data-label="Golden autumn forest"></div>
+          <div class="tile sty" data-src="media/nf_multi/s0.mp4" data-poster="media/nf_multi/s0.jpg" data-label="Late-autumn tundra"></div>
+          <div class="tile sty" data-src="media/nf_multi/s1.mp4" data-poster="media/nf_multi/s1.jpg" data-label="Snowfield dawn"></div>
+          <div class="tile sty" data-src="media/nf_multi/s3.mp4" data-poster="media/nf_multi/s3.jpg" data-label="Misty rain swamp"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm7" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch3__trenchfire_e04/in.mp4" data-poster="media/agentgame/batch3__trenchfire_e04/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__trenchfire_e04/crayon.mp4" data-poster="media/agentgame/batch3__trenchfire_e04/crayon.jpg" data-label="Kid's crayon"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__trenchfire_e04/samurai.mp4" data-poster="media/agentgame/batch3__trenchfire_e04/samurai.jpg" data-label="Feudal Japan"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__trenchfire_e04/fallout.mp4" data-poster="media/agentgame/batch3__trenchfire_e04/fallout.jpg" data-label="Nuclear wasteland"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__trenchfire_e04/synthwave.mp4" data-poster="media/agentgame/batch3__trenchfire_e04/synthwave.jpg" data-label="Synthwave"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm8" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch4__city-roam_e02/in.mp4" data-poster="media/agentgame/batch4__city-roam_e02/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__city-roam_e02/papercraft.mp4" data-poster="media/agentgame/batch4__city-roam_e02/papercraft.jpg" data-label="Papercraft"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__city-roam_e02/popart.mp4" data-poster="media/agentgame/batch4__city-roam_e02/popart.jpg" data-label="Pop art"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__city-roam_e02/pixelart.mp4" data-poster="media/agentgame/batch4__city-roam_e02/pixelart.jpg" data-label="16-bit pixel art"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__city-roam_e02/lego.mp4" data-poster="media/agentgame/batch4__city-roam_e02/lego.jpg" data-label="LEGO bricks"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm9" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch4__turbo-kart_e01/in.mp4" data-poster="media/agentgame/batch4__turbo-kart_e01/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__turbo-kart_e01/popart.mp4" data-poster="media/agentgame/batch4__turbo-kart_e01/popart.jpg" data-label="Pop art"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__turbo-kart_e01/chalkboard.mp4" data-poster="media/agentgame/batch4__turbo-kart_e01/chalkboard.jpg" data-label="Chalkboard doodle"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__turbo-kart_e01/pixelart.mp4" data-poster="media/agentgame/batch4__turbo-kart_e01/pixelart.jpg" data-label="16-bit pixel art"></div>
+          <div class="tile sty" data-src="media/agentgame/batch4__turbo-kart_e01/lego.mp4" data-poster="media/agentgame/batch4__turbo-kart_e01/lego.jpg" data-label="LEGO bricks"></div>
+        </div>
+      </figure>
+      <figure class="card sample" id="sm10" hidden>
+        <div class="multi">
+          <div class="tile" data-src="media/agentgame/batch3__co-workers_e02/in.mp4" data-poster="media/agentgame/batch3__co-workers_e02/in.jpg" data-label="Blockout input"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__co-workers_e02/bioshock.mp4" data-poster="media/agentgame/batch3__co-workers_e02/bioshock.jpg" data-label="Deco dieselpunk"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__co-workers_e02/frozen.mp4" data-poster="media/agentgame/batch3__co-workers_e02/frozen.jpg" data-label="Frozen kingdom"></div>
+          <div class="tile sty" data-src="media/agentgame/batch3__co-workers_e02/papercraft.mp4" data-poster="media/agentgame/batch3__co-workers_e02/papercraft.jpg" data-label="Papercraft"></div>
+        </div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="data" class="s5">
+  <div class="wrap">
+    <div class="head-row"><span class="kick">04</span><h2>Training data</h2></div>
+    <p class="sub">Paired (crude &rarr; styled) clips from three sources, frame-aligned by construction.</p>
+    <div class="feat">
+      <article><h3><em>3,221 clips</em>Agent-made games</h3>
+        <p><b>38 games built end-to-end by an AI coding agent</b>, each exported with five aligned render passes, from blockout to final.</p>
+        <div class="wipe" data-in="media/data5/agentgame_sem/in.mp4" data-out="media/data5/agentgame_sem/out.mp4" data-poster="media/data5/agentgame_sem/poster.jpg"></div></article>
+      <article><h3><em>3,910 clips</em>Unreal Engine</h3>
+        <p>Same simulation rendered twice &mdash; blockout and full &mdash; with scenarios <b>scripted against zero-shot failure cases</b>.</p>
+        <div class="wipe" data-in="media/data5/ue_pair/in.mp4" data-out="media/data5/ue_pair/out.mp4" data-poster="media/data5/ue_pair/poster.jpg"></div></article>
+      <article><h3><em>3,199 clips</em>Real recordings</h3>
+        <p>Real gameplay with detected 3D boxes re-rendered as <b>crude proxy shapes</b>; the original recording is the target.</p>
+        <div class="wipe" data-in="media/data5/real_pair/in.mp4" data-out="media/data5/real_pair/out.mp4" data-poster="media/data5/real_pair/poster.jpg"></div></article>
+    </div>
+    <p class="total-line">TOTAL&ensp;<b>10,330 paired clips</b>&ensp;&middot;&ensp;124 frames @ 24 fps, 1344&times;768&ensp;&middot;&ensp;&asymp; 14.8 hours of paired video</p>
+  </div>
+</section>
+
+<section id="bench" class="s6">
+  <div class="wrap">
+    <div class="head-row"><span class="kick">05</span><h2>Does it stay faithful?</h2></div>
+    <p class="sub">Frame-level metrics cannot tell whether each entity is rendered correctly, so we score entity correspondence directly: 59 held-out cases, 753 entities annotated with ground-truth boxes, same seed / steps / captions as the zero-shot base. The GT floor runs the real target footage through the same measurement pipeline.</p>
+    <div class="bench"><table>
+      <tr><th>Metric</th><th>Zero-shot</th><th>Ours</th><th>GT floor</th></tr>
+      <tr><td>Temporal match &uarr;</td><td>50.9%</td><td class="ours">62.9%</td><td class="gt">80.9%</td></tr>
+      <tr><td>Position match &uarr;</td><td>57.1%</td><td class="ours">61.9%</td><td class="gt">79.3%</td></tr>
+      <tr><td>Unrendered input blocks &darr;</td><td>4.1%</td><td class="ours">2.9%</td><td class="gt">0.1%</td></tr>
+      <tr><td>Hallucinated entities &darr;</td><td>52.1%</td><td class="ours">46.0%</td><td class="gt">34.1%</td></tr>
+      <tr><td>Missed count changes &darr;</td><td>34.7%</td><td class="ours">21.3%</td><td class="gt">0.0%</td></tr>
+    </table></div>
+    <p class="note">A single checkpoint improves temporal match in every genre of the benchmark &mdash; first-person shooter, top-down, third-person, crowd and vehicle games &mdash; while styles stay fully promptable. Full protocol, per-source splits and qualitative comparisons are in the technical report.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">AnyGameRenderer &middot; internal demo page &middot; examples match the current promo reel &middot; more coming</div>
+</footer>
+
+<script>
+// ---- wipe cards (sections 01 & 02): two stacked videos + draggable seam ----
+document.querySelectorAll('.wipe').forEach(w=>{
+  const mk=cls=>{const v=document.createElement('video');v.muted=true;v.loop=true;v.playsInline=true;
+    v.preload='none';if(cls)v.className=cls;return v;};
+  const out=mk(null), cond=mk('cond');
+  out.poster=w.dataset.poster||'';
+  w.append(out,cond);
+  const seam=document.createElement('i');seam.className='seam';w.append(seam);
+  const tl=document.createElement('span');tl.className='wtag l';tl.textContent=w.dataset.ltag||'Input';
+  const tr=document.createElement('span');tr.className='wtag r';tr.textContent=w.dataset.rtag||'Ours';
+  w.append(tl,tr);
+  w._out=out;w._cond=cond;w._loaded=false;
+
+  w.load=()=>{if(w._loaded)return;w._loaded=true;
+    out.src=w.dataset.out;cond.src=w.dataset.in;out.load();cond.load();};
+  w.playBoth=()=>{w.load();out.play().catch(()=>{});cond.play().catch(()=>{});};
+  w.pauseBoth=()=>{out.pause();cond.pause();};
+  const setX=e=>{const r=w.getBoundingClientRect();
+    let x=100*(e.clientX-r.left)/r.width;x=Math.max(2,Math.min(98,x));
+    w.style.setProperty('--x',x.toFixed(2)+'%');};
+  w.addEventListener('pointermove',setX);
+  w.addEventListener('pointerdown',setX);
+});
+
+// ---- multi cards (section 03): one input + several style outputs, all playing ----
+document.querySelectorAll('.multi').forEach(m=>{
+  m._vs=[];
+  m.querySelectorAll('.tile[data-src]').forEach(t=>{
+    const v=document.createElement('video');
+    v.muted=true;v.loop=true;v.playsInline=true;v.preload='none';
+    v.poster=t.dataset.poster||'';
+    v._src=t.dataset.src;
+    t.append(v);
+    const s=document.createElement('span');s.className='wtag l';s.textContent=t.dataset.label;
+    t.append(s);
+    m._vs.push(v);
+  });
+  m._loaded=false;
+  m.load=()=>{if(m._loaded)return;m._loaded=true;m._vs.forEach(v=>{v.src=v._src;v.load();});};
+  m.playBoth=()=>{m.load();m._vs.forEach(v=>v.play().catch(()=>{}));};
+  m.pauseBoth=()=>{m._vs.forEach(v=>v.pause());};
+});
+
+// ---- lazy play/pause on visibility ----
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  const w=e.target;
+  if(e.isIntersecting){w.playBoth();}else{w.pauseBoth();}
+}),{rootMargin:'120px',threshold:0.05});
+document.querySelectorAll('.wipe,.multi').forEach(w=>io.observe(w));
+
+// ---- keep grouped videos in sync ----
+setInterval(()=>{
+  document.querySelectorAll('.wipe').forEach(w=>{
+    const a=w._out,b=w._cond;
+    if(!w._loaded||a.paused||!a.duration||!b.duration)return;
+    if(Math.abs(a.currentTime-b.currentTime)>0.09){try{b.currentTime=a.currentTime;}catch(e){}}
+  });
+  document.querySelectorAll('.multi').forEach(m=>{
+    if(!m._loaded)return;
+    const a=m._vs[0];
+    if(a.paused||!a.duration)return;
+    m._vs.slice(1).forEach(b=>{
+      if(!b.duration)return;
+      if(Math.abs(a.currentTime-b.currentTime)>0.09){try{b.currentTime=a.currentTime;}catch(e){}}
+    });
+  });
+},700);
+
+// ---- sample tabs (section 03) ----
+const tb=document.getElementById('s3tabs');
+tb.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  tb.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.querySelectorAll('figure.sample').forEach(f=>{
+    const show=(f.id===b.dataset.for);
+    f.hidden=!show;
+    const m=f.querySelector('.multi');
+    if(show){m.playBoth();}else{m.pauseBoth();}
+  });
+}));
+
+// ---- backdrop particles ----
+const cv=document.getElementById('fx'),cx=cv.getContext('2d');let PW,PH,pts=[];
+function rs(){PW=cv.width=innerWidth;PH=cv.height=innerHeight;
+  pts=Array.from({length:Math.min(150,Math.floor(PW/9))},()=>({x:Math.random()*PW,y:Math.random()*PH,
+    r:Math.random()*1.4+.3,s:Math.random()*.25+.05,p:Math.random()*Math.PI*2}));}
+rs();addEventListener('resize',rs);
+(function tick(t){
+  cx.clearRect(0,0,PW,PH);
+  for(const p of pts){
+    p.y-=p.s;if(p.y<-4){p.y=PH+4;p.x=Math.random()*PW;}
+    const a=.22+.26*Math.sin(t/900+p.p);
+    cx.fillStyle='rgba(140,190,255,'+a.toFixed(3)+')';
+    cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fill();}
+  requestAnimationFrame(tick);
+})(0);
+</script>
+</body>
+</html>
